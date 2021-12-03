@@ -1,6 +1,10 @@
 # Adventofcode
 
-**TODO: Add description**
+Just me attempting to learn Elixir through the advent of code 2021 events.
+
+![nothing to see here](https://media.giphy.com/media/13d2jHlSlxklVe/giphy.gif)
+
+### mix project structure but nothing is actually wired up atm.
 
 ## Installation
 
