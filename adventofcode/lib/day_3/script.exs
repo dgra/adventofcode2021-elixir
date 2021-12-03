@@ -1,72 +1,87 @@
 defmodule Day3 do
-  def loop(cache, [head | tail]) do
-    line_array = head |>
-      String.graphemes |>
-      Enum.map(&(String.to_integer(&1)))
-
-    new_cache = inner_loop(cache, line_array)
-
-    loop(new_cache, tail)
+  def compare_o2_counts(counts) do
+    if counts[:on] >= counts[:off] do
+      1
+    else
+      0
+    end
   end
 
-  def loop(cache, []) do
-    cache
+  def compare_co2_counts(counts) do
+    if counts[:on] < counts[:off] do
+      1
+    else
+      0
+    end
   end
 
-  def inner_loop([curr_cache | rest_cache], [head | tail]) do
-    cache = set_bit(curr_cache, head)
-    [cache | inner_loop(rest_cache, tail)]
+  def find_winning_bit(binaries, idx, compare_fn) do
+    counts = binaries |>
+      Enum.reduce(%{on: 0, off: 0}, fn(x, acc) ->
+        if Enum.at(x, idx) == 1, do: %{acc | on: acc[:on] + 1}, else: %{acc | off: acc[:off] + 1} end
+      )
+
+    compare_fn.(counts)
   end
 
-  def inner_loop([], []) do
-    []
+  def find_binary(binaries, compare_fn) do
+    find_binary(binaries, 0, compare_fn)
   end
 
-  def set_bit(cache, 0) do
-    %{
-      on: cache[:on],
-      off: cache[:off] + 1
-    }
+  def find_binary([last_value], _, _) do
+    last_value
   end
 
-  def set_bit(cache, 1) do
-    %{
-      on: cache[:on] + 1,
-      off: cache[:off]
-    }
+  def find_binary(list_of_binaries, idx, compare_fn) do
+    bit_of_interest = find_winning_bit(list_of_binaries, idx, compare_fn)
+
+    # IO.puts("iter: idx: #{idx}, boi: #{bit_of_interest}")
+    # IO.inspect(list_of_binaries)
+    filtered_list = list_of_binaries |>
+      Enum.reject(fn(binary_list) ->
+        Enum.at(binary_list, idx) != bit_of_interest
+      end)
+
+    find_binary(filtered_list, idx + 1, compare_fn)
   end
 
-  def get_gamma_rate([head | tail], rev_idx) do
-    acc = get_gamma_rate(tail, rev_idx - 1)
-    binary_val = if head[:off] >= head[:on], do: 0, else: 1
-
-    acc + (binary_val * :math.pow(2, rev_idx))
+  # Assumes most significant bit first order.
+  def binary_to_dec(binary_list) do
+    binary_to_dec(Enum.reverse(binary_list), 0)
   end
 
-  def get_gamma_rate([], -1) do 0 end
+  def binary_to_dec([], _) do 0 end
 
-  def get_epsilon_rate([head | tail], rev_idx) do
-    acc = get_epsilon_rate(tail, rev_idx - 1)
-    binary_val = if head[:off] >= head[:on], do: 1, else: 0
-
-    acc + (binary_val * :math.pow(2, rev_idx))
+  # Assumes least significant bit first order.
+  def binary_to_dec([head | tail], idx) do
+    acc = binary_to_dec(tail, idx + 1)
+    acc + (head * :math.pow(2, idx))
   end
 
-  def get_epsilon_rate([], -1) do 0 end
+  def build_bit_counter(bit_size) do
+    for _ <- 0..bit_size, do: %{on: 0, off: 0}
+  end
+
+  def run(filename) do
+    IO.puts("Options: #{filename}")
+
+    { _, contents } = File.read(filename)
+    lines = contents |>
+      String.split("\n", trim: true) |>
+      Enum.map(fn(x) ->
+        String.graphemes(x) |>
+        Enum.map(&(String.to_integer(&1)))
+      end)
+
+    o2_gen_rate = binary_to_dec(find_binary(lines, &compare_o2_counts/1))
+    co2_gen_rate = binary_to_dec(find_binary(lines, &compare_co2_counts/1))
+
+    IO.inspect(o2_gen_rate)
+    IO.inspect(co2_gen_rate)
+    IO.inspect(o2_gen_rate*co2_gen_rate)
+  end
 end
 
-options = OptionParser.parse(["--file", "input.txt"], strict: [file: :string])
-filename = elem(options, 0)[:file]
-IO.puts("Options: #{filename}")
-{ _, contents } = File.read(filename)
-lines = Enum.filter((contents |>
-  String.split("\n")), fn(x) -> x != "" end)
-
-cache = [%{on: 0, off: 0}, %{on: 0, off: 0}, %{on: 0, off: 0}, %{on: 0, off: 0}, %{on: 0, off: 0}, %{on: 0, off: 0}, %{on: 0, off: 0}, %{on: 0, off: 0}, %{on: 0, off: 0}, %{on: 0, off: 0}, %{on: 0, off: 0}, %{on: 0, off: 0}]
-
-new_cache = Day3.loop(cache, lines)
-gamma_rate = Day3.get_gamma_rate(new_cache, length(new_cache) - 1)
-epsilon_rate = Day3.get_epsilon_rate(new_cache, length(new_cache) - 1)
-IO.puts("G: #{gamma_rate}")
-IO.puts("E: #{epsilon_rate}")
-IO.puts("G*E: #{gamma_rate * epsilon_rate}")
+filename = "input_short.txt"
+filename = "input.txt"
+Day3.run(filename)
